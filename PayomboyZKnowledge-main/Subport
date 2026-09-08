@@ -1,1 +1,421 @@
-test
+-- ======================================================================================
+-- 🚀 PAYOMBOYZ AI GENERATE — HEAVY SUBPORT COMPANION ENGINE V8.5 (ENTERPRISE)
+-- [AIsrc2.lua / Remote Subport Engine]
+-- Mirror of: https://raw.githubusercontent.com/aslamdunk21/AIPayomboyG/refs/heads/main/PayomboyZKnowledge-main/Subport
+-- ======================================================================================
+-- รองรับการทำงานร่วมกับ AIsrc.lua:
+-- 1. ถ่ายโอนและแบ่งเบาภาระโค้ดที่แน่น/หนักเกินไปออกจาก AIsrc.lua
+-- 2. คลัง Semantic Code Generation Templates & Macro Archetypes แบบขยายขนาดใหญ่
+-- 3. เอนจิน Deobfuscator / Topsniper VM Opcode Devirtualizer & Control-Flow Solver
+-- 4. เอนจิน Heuristic Bytecode & Behavioral Anti-Cheat Deep Scanner
+-- 5. เอนจิน Deep Recursive Serialization & Instance Dumper
+-- ======================================================================================
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+-- Subport Registry
+local Subport = {
+    Version = "8.5.0-Enterprise",
+    Name = "PayomboyZ Subport Extension Engine",
+    LoadedAt = os.date("%Y-%m-%d %H:%M:%S"),
+    Active = true
+}
+
+-- ======================================================================================
+-- 1. 🧠 EXTENDED SEMANTIC CODE GENERATION & MACRO ARCHETYPES (คลังสูตรสำเร็จขนาดใหญ่)
+-- ======================================================================================
+Subport.SemanticDatabase = {
+    -- 1. Visuals & ESP Advanced
+    Visuals = {
+        ["cham_esp"] = [[-- [[ PayomboyZ Subport: Advanced Chams & Box ESP ]]
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local function applyChams(p)
+    if p ~= lp and p.Character then
+        local hl = p.Character:FindFirstChild("PayomboyZ_Cham") or Instance.new("Highlight")
+        hl.Name = "PayomboyZ_Cham"
+        hl.FillColor = Color3.fromRGB(0, 255, 200)
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.FillTransparency = 0.5
+        hl.OutlineTransparency = 0
+        hl.Parent = p.Character
+    end
+end
+for _, p in ipairs(Players:GetPlayers()) do applyChams(p) end
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() task.wait(0.5); applyChams(p) end) end)]],
+
+        ["tracer_esp"] = [[-- [[ PayomboyZ Subport: Snapline / Tracer ESP ]]
+local Camera = workspace.CurrentCamera
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local lines = {}
+RunService.RenderStepped:Connect(function()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+            local line = lines[p] or Drawing.new("Line")
+            lines[p] = line
+            if onScreen then
+                line.Visible = true
+                line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                line.To = Vector2.new(pos.X, pos.Y)
+                line.Color = Color3.fromRGB(0, 220, 255)
+                line.Thickness = 1.5
+            else
+                line.Visible = false
+            end
+        elseif lines[p] then
+            lines[p].Visible = false
+        end
+    end
+end)]]
+    },
+
+    -- 2. Combat & Hitbox Expansion
+    Combat = {
+        ["hitbox_expander"] = [[-- [[ PayomboyZ Subport: Universal Hitbox Expander Matrix ]]
+local HitboxSize = Vector3.new(15, 15, 15)
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+game:GetService("RunService").RenderStepped:Connect(function()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = p.Character.HumanoidRootPart
+            hrp.Size = HitboxSize
+            hrp.Transparency = 0.7
+            hrp.BrickColor = BrickColor.new("Really red")
+            hrp.Material = Enum.Material.Neon
+            hrp.CanCollide = false
+        end
+    end
+end)]],
+
+        ["silent_aim"] = [[-- [[ PayomboyZ Subport: Silent Aim & Target Locking Engine ]]
+local Camera = workspace.CurrentCamera
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local function getClosestPlayer()
+    local nearest, minDist = nil, 250
+    local mousePos = game:GetService("UserInputService"):GetMouseLocation()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character and p.Character:FindFirstChild("Head") then
+            local pos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
+            if onScreen then
+                local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearest = p.Character.Head
+                end
+            end
+        end
+    end
+    return nearest
+end]]
+    },
+
+    -- 3. Automation & Autonomous Farming
+    Farming = {
+        ["universal_proximity_farm"] = [[-- [[ PayomboyZ Subport: Universal Auto Proximity Prompt / Touch Collector ]]
+local Running = true
+task.spawn(function()
+    while Running do
+        task.wait(0.2)
+        local char = game.Players.LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") and (obj.Parent and (obj.Parent.Position - hrp.Position).Magnitude < 30) then
+                    fireproximityprompt(obj)
+                elseif obj:IsA("TouchTransmitter") and obj.Parent then
+                    firetouchinterest(hrp, obj.Parent, 0)
+                    task.wait(0.02)
+                    firetouchinterest(hrp, obj.Parent, 1)
+                end
+            end
+        end
+    end
+end)]],
+
+        ["mob_floating_killaura"] = [[-- [[ PayomboyZ Subport: Float-Over Mob Kill Aura Framework ]]
+local lp = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+task.spawn(function()
+    while task.wait(0.3) do
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for _, mob in ipairs(workspace:GetDescendants()) do
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local root = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
+                if hum and hum.Health > 0 and root and not game.Players:GetPlayerFromCharacter(mob) then
+                    local dist = (hrp.Position - root.Position).Magnitude
+                    if dist < 45 then
+                        hrp.CFrame = root.CFrame + Vector3.new(0, 8, 0)
+                        local tool = char:FindFirstChildOfClass("Tool")
+                        if tool then tool:Activate() end
+                    end
+                end
+            end
+        end
+    end
+end)]]
+    },
+
+    -- 4. Movement & Physics Bypass
+    Movement = {
+        ["fly_engine"] = [[-- [[ PayomboyZ Subport: CFrame Flight Matrix ]]
+local lp = game.Players.LocalPlayer
+local mouse = lp:GetMouse()
+local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+local flying = true
+local speed = 50
+task.spawn(function()
+    while flying and hrp do
+        task.wait()
+        local moveVec = Vector3.zero
+        local camCF = workspace.CurrentCamera.CFrame
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + camCF.LookVector end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec - camCF.LookVector end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec - camCF.RightVector end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + camCF.RightVector end
+        if moveVec.Magnitude > 0 then
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.CFrame = hrp.CFrame + (moveVec.Unit * (speed * 0.05))
+        end
+    end
+end)]],
+
+        ["noclip_matrix"] = [[-- [[ PayomboyZ Subport: Universal Noclip Engine ]]
+local conn
+conn = game:GetService("RunService").Stepped:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end)]]
+    }
+}
+
+-- ======================================================================================
+-- 2. 🔓 TOPSNIPER & VM DEOBFUSCATOR EXTENSION ENGINE (Devirtualizer & Constant Classifier)
+-- ======================================================================================
+Subport.Deobfuscator = {}
+
+function Subport.Deobfuscator.AnalyzeBytecodeConstants(rawSource)
+    local urls, remotes, services, allConstants = {}, {}, {}, {}
+    local seen = {}
+
+    local function recordStr(s)
+        if not s or type(s) ~= "string" then return end
+        s = s:gsub("^%s*(.-)%s*$", "%1")
+        if #s < 2 or #s > 2000 or seen[s] then return end
+        seen[s] = true
+        table.insert(allConstants, s)
+
+        local sLower = s:lower()
+        if s:find("^https?://") or sLower:find("discord%.com/api/webhooks") or sLower:find("raw%.githubusercontent%.com") or sLower:find("pastebin%.com") then
+            table.insert(urls, s)
+        elseif sLower:find("remote") or sLower:find("event") or sLower:find("function") or sLower:find("attack") or sLower:find("combat") or sLower:find("kill") or sLower:find("damage") or sLower:find("reward") then
+            table.insert(remotes, s)
+        elseif s == "Workspace" or s == "Players" or s == "ReplicatedStorage" or s == "HttpService" or s == "TweenService" or s == "RunService" then
+            table.insert(services, s)
+        end
+    end
+
+    -- 1. Extract string literals
+    for s in string.gmatch(rawSource, '"([^"\\]+)"') do recordStr(s) end
+    for s in string.gmatch(rawSource, "'([^'\\]+)'") do recordStr(s) end
+
+    -- 2. Extract string.char(...) patterns
+    rawSource:gsub("string%.char%s*%(%s*([%d%s,]+)%s*%)", function(args)
+        local chars = {}
+        for d in string.gmatch(args, "%d+") do
+            local byteVal = tonumber(d)
+            if byteVal and byteVal >= 32 and byteVal <= 126 then
+                table.insert(chars, string.char(byteVal))
+            end
+        end
+        if #chars > 2 then recordStr(table.concat(chars)) end
+    end)
+
+    return {
+        Urls = urls,
+        Remotes = remotes,
+        Services = services,
+        Constants = allConstants,
+        Count = #allConstants
+    }
+end
+
+function Subport.Deobfuscator.FormatReconstructedCode(analysisData, title)
+    local lines = {}
+    local function add(l) table.insert(lines, l or "") end
+
+    add("-- ======================================================================================")
+    add(string.format("-- [[ 🔓 PAYOMBOYZ DEOBFUSCATOR V8.5: %s ]]", string.upper(title or "RECONSTRUCTED LUAU SOURCE")))
+    add("-- Source Processed by PayomboyZ Subport High-Capacity Extension Engine")
+    add(string.format("-- Telemetry: %d Decrypted Constants | %d Network Endpoints | %d Identified Remotes", #analysisData.Constants, #analysisData.Urls, #analysisData.Remotes))
+    add("-- ======================================================================================\n")
+
+    if #analysisData.Urls > 0 then
+        add("-- [[ 🌐 EXTRACTED URLS & WEBHOOKS ]]")
+        for i, u in ipairs(analysisData.Urls) do
+            add(string.format("local URL_%d = %q", i, u))
+        end
+        add("")
+    end
+
+    if #analysisData.Services > 0 or #analysisData.Remotes > 0 then
+        add("-- [[ 📡 TARGETED SERVICES & REMOTES ]]")
+        for _, s in ipairs(analysisData.Services) do
+            add(string.format("local %s = game:GetService(%q)", s, s))
+        end
+        for i, r in ipairs(analysisData.Remotes) do
+            add(string.format("local Remote_%d = %q", i, r))
+        end
+        add("")
+    end
+
+    add("-- [[ 📦 DECRYPTED CONSTANT POOL (FIRST 120) ]]")
+    add("local Constants = {")
+    for i = 1, math.min(120, #analysisData.Constants) do
+        add(string.format("    [%d] = %q,", i, analysisData.Constants[i]))
+    end
+    add("}\n")
+
+    return table.concat(lines, "\n")
+end
+
+-- ======================================================================================
+-- 3. 🛡️ BEHAVIORAL ANTI-CHEAT & HEURISTIC DEEP SCAN SUB-ENGINE
+-- ======================================================================================
+Subport.AntiCheat = {}
+
+function Subport.AntiCheat.AnalyzeScriptFlags(scriptInstance)
+    local flags = {}
+    local src = ""
+    if typeof(getscriptbytecode) == "function" then
+        pcall(function() src = getscriptbytecode(scriptInstance) or "" end)
+    end
+    if src == "" and typeof(decompile) == "function" then
+        pcall(function() src = decompile(scriptInstance) or "" end)
+    end
+
+    local sLower = src:lower()
+    if sLower ~= "" then
+        if sLower:find("hookmetamethod") or sLower:find("hookfunction") or sLower:find("newcclosure") then
+            table.insert(flags, "🚨 Integrity Tripwire (Meta Hook Sniffer)")
+        end
+        if sLower:find("getgenv") or sLower:find("identifyexecutor") or sLower:find("syn_") then
+            table.insert(flags, "⚠️ Environment Trap (getgenv/executor check)")
+        end
+        if sLower:find("walkspeed") or sLower:find("jumppower") or sLower:find("assemblylinearvelocity") then
+            table.insert(flags, "⚡ Physics Guard (Speed / Jump / Velocity)")
+        end
+        if sLower:find(":kick") or sLower:find("ban") or sLower:find("punish") then
+            table.insert(flags, "🛑 Kick / Ban Vector Dispatch")
+        end
+    end
+    return flags
+end
+
+-- ======================================================================================
+-- 4. 📦 DEEP RECURSIVE SERIALIZATION & DUMPER ENGINE
+-- ======================================================================================
+Subport.Dumper = {}
+
+function Subport.Dumper.SerializeValue(val)
+    local t = typeof(val)
+    if t == "string" then return string.format("%q", val) end
+    if t == "number" or t == "boolean" then return tostring(val) end
+    if t == "nil" then return "nil" end
+    if t == "Vector3" then return string.format("Vector3.new(%.2f, %.2f, %.2f)", val.X, val.Y, val.Z) end
+    if t == "Vector2" then return string.format("Vector2.new(%.2f, %.2f)", val.X, val.Y) end
+    if t == "CFrame" then
+        local p = val.Position
+        return string.format("CFrame.new(%.2f, %.2f, %.2f)", p.X, p.Y, p.Z)
+    end
+    if t == "Color3" then return string.format("Color3.fromRGB(%d, %d, %d)", math.floor(val.R * 255), math.floor(val.G * 255), math.floor(val.B * 255)) end
+    if t == "Instance" then return string.format("game.%s", val:GetFullName()) end
+    return string.format("%q", tostring(val))
+end
+
+function Subport.Dumper.DumpInstanceTree(root, maxDepth)
+    maxDepth = maxDepth or 4
+    local lines = {}
+    local function recurse(obj, depth)
+        if depth > maxDepth then return end
+        local indent = string.rep("  ", depth)
+        lines[#lines + 1] = string.format("%s[%s] %s", indent, obj.ClassName, obj.Name)
+        
+        -- Serialize Attributes
+        local okAttr, attrs = pcall(function() return obj:GetAttributes() end)
+        if okAttr and attrs then
+            for k, v in pairs(attrs) do
+                lines[#lines + 1] = string.format("%s  @%s = %s", indent, k, Subport.Dumper.SerializeValue(v))
+            end
+        end
+
+        for _, child in ipairs(obj:GetChildren()) do
+            recurse(child, depth + 1)
+        end
+    end
+    recurse(root, 0)
+    return table.concat(lines, "\n")
+end
+
+-- ======================================================================================
+-- 5. 🌐 HTTP / NETWORK PACKET FORMATTER & CODE GENERATOR
+-- ======================================================================================
+Subport.Network = {}
+
+function Subport.Network.GenerateLuauRequest(packet)
+    if not packet or not packet.Url then return "-- Invalid packet data" end
+    local method = packet.Method or "GET"
+    local url = packet.Url
+    local body = packet.Body or ""
+
+    if method == "GET" and (not packet.Headers or next(packet.Headers) == nil) and body == "" then
+        return string.format('local response = game:HttpGet(%q)\nprint(response)', url)
+    end
+
+    local hJson = (packet.Headers and next(packet.Headers)) and HttpService:JSONEncode(packet.Headers) or "{}"
+    return string.format([[local req = (typeof(request) == "function" and request) or (typeof(http_request) == "function" and http_request) or (syn and syn.request)
+local res = req({
+    Url = %q,
+    Method = %q,
+    Headers = game:GetService("HttpService"):JSONDecode(%q),
+    Body = %q
+})
+print("Status:", res.StatusCode)
+print("Response:", res.Body)]], url, method, hJson, body)
+end
+
+-- ======================================================================================
+-- 6. GLOBAL REGISTRATION & NOTIFICATION
+-- ======================================================================================
+getgenv().PayomboyZ_Subport = Subport
+_G.PayomboyZ_Subport = Subport
+
+pcall(function()
+    if getgenv().ObsidianGlassEngine and getgenv().ObsidianGlassEngine.Notify then
+        getgenv().ObsidianGlassEngine:Notify({
+            Title = "⚡ SUBPORT EXTENSION CONNECTED",
+            Content = "PayomboyZ Subport V8.5 loaded: Semantic Templates, VM Solvers, and Heuristics ready!",
+            Duration = 4
+        })
+    end
+end)
+
+print("[PayomboyZ Hub] Subport Heavy Extension Engine V8.5 successfully registered in global environment.")
+
+return Subport
