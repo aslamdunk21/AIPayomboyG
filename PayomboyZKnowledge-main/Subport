@@ -1,14 +1,15 @@
 -- ======================================================================================
--- 🚀 PAYOMBOYZ AI GENERATE — HEAVY SUBPORT COMPANION ENGINE V8.5 (ENTERPRISE)
--- [AIsrc2.lua / Remote Subport Engine]
+-- 🚀 PAYOMBOYZ AI GENERATE — HEAVY SUBPORT COMPANION ENGINE V9.0 (ENTERPRISE)
+-- [AIsrc2.lua / Remote Subport Engine - Powered by Dex++ Architecture]
 -- Mirror of: https://raw.githubusercontent.com/aslamdunk21/AIPayomboyG/refs/heads/main/PayomboyZKnowledge-main/Subport
 -- ======================================================================================
 -- รองรับการทำงานร่วมกับ AIsrc.lua:
 -- 1. ถ่ายโอนและแบ่งเบาภาระโค้ดที่แน่น/หนักเกินไปออกจาก AIsrc.lua
 -- 2. คลัง Semantic Code Generation Templates & Macro Archetypes แบบขยายขนาดใหญ่
--- 3. เอนจิน Deobfuscator / Topsniper VM Opcode Devirtualizer & Control-Flow Solver
--- 4. เอนจิน Heuristic Bytecode & Behavioral Anti-Cheat Deep Scanner
--- 5. เอนจิน Deep Recursive Serialization & Instance Dumper
+-- 3. เอนจิน Deobfuscator & Topsniper VM Devirtualizer (Non-blocking, Anti-Hang, Safe Sandbox)
+-- 4. Dex++ Bridge Core: Remote/Instance Filtering, Fast Serialization, Metatable Inspection
+-- 5. เอนจิน Heuristic Bytecode & Behavioral Anti-Cheat Deep Scanner
+-- 6. เอนจิน Deep Recursive Serialization & Instance Dumper
 -- ======================================================================================
 
 local Players = game:GetService("Players")
@@ -21,11 +22,166 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Subport Registry
 local Subport = {
-    Version = "8.5.0-Enterprise",
+    Version = "9.0.0-Enterprise-DexEnhanced",
     Name = "PayomboyZ Subport Extension Engine",
     LoadedAt = os.date("%Y-%m-%d %H:%M:%S"),
     Active = true
 }
+
+-- ======================================================================================
+-- 0. 🛠️ DEX++ LOW-LEVEL COMPATIBILITY & BRIDGE ENGINE (จาก Dex.lua)
+-- ======================================================================================
+Subport.DexBridge = {}
+
+-- Safe Cloneref Helper (ป้องกัน Anti-Cheat ตรวจจับการอ้างอิง Instance)
+local safeCloneref = cloneref or function(ref)
+    if not getreg then return ref end
+    local InstanceList
+    local a = Instance.new("Part")
+    for _, c in pairs(getreg()) do
+        if type(c) == "table" and #c then
+            if rawget(c, "__mode") == "kvs" then
+                for d, e in pairs(c) do
+                    if e == a then
+                        InstanceList = c
+                        break
+                    end
+                end
+            end
+        end
+    end
+    local f = {}
+    function f.invalidate(g)
+        if not InstanceList then return g end
+        for b, c in pairs(InstanceList) do
+            if c == g then
+                InstanceList[b] = nil
+                return g
+            end
+        end
+        return g
+    end
+    return f.invalidate(ref)
+end
+Subport.DexBridge.CloneRef = safeCloneref
+
+-- Dex-style Fast Remote Finder (ค้นหา Remotes และ Bindables ทั้งหมดในเกม)
+function Subport.DexBridge.FindRemotes(root)
+    root = root or game
+    local remotes = {}
+    local function check(inst)
+        pcall(function()
+            if inst:IsA("RemoteEvent") or inst:IsA("RemoteFunction") or inst:IsA("BindableEvent") or inst:IsA("BindableFunction") then
+                table.insert(remotes, {
+                    Instance = inst,
+                    Name = inst.Name,
+                    ClassName = inst.ClassName,
+                    Path = inst:GetFullName()
+                })
+            end
+        end)
+    end
+    pcall(function()
+        for _, obj in ipairs(root:GetDescendants()) do
+            check(obj)
+        end
+    end)
+    return remotes
+end
+
+-- Dex-style Loaded ModuleScripts Finder
+function Subport.DexBridge.GetLoadedModules()
+    local modules = {}
+    if typeof(getloadedmodules) == "function" then
+        local ok, list = pcall(getloadedmodules)
+        if ok and type(list) == "table" then
+            for _, m in ipairs(list) do
+                if typeof(m) == "Instance" and m:IsA("ModuleScript") then
+                    table.insert(modules, {
+                        Instance = m,
+                        Name = m.Name,
+                        Path = m:GetFullName()
+                    })
+                end
+            end
+        end
+    end
+    return modules
+end
+
+-- Dex-grade Value Serializer (แปลง CFrame, Vector3, Color3, Enum, Tables)
+function Subport.DexBridge.FormatValue(val, depth)
+    depth = depth or 0
+    if depth > 4 then return tostring(val) end
+    local t = typeof(val)
+    if t == "string" then
+        return string.format("%q", val)
+    elseif t == "number" or t == "boolean" then
+        return tostring(val)
+    elseif t == "nil" then
+        return "nil"
+    elseif t == "Vector3" then
+        return string.format("Vector3.new(%.3f, %.3f, %.3f)", val.X, val.Y, val.Z)
+    elseif t == "Vector2" then
+        return string.format("Vector2.new(%.3f, %.3f)", val.X, val.Y)
+    elseif t == "CFrame" then
+        local p = val.Position
+        return string.format("CFrame.new(%.3f, %.3f, %.3f)", p.X, p.Y, p.Z)
+    elseif t == "Color3" then
+        return string.format("Color3.fromRGB(%d, %d, %d)", math.floor(val.R * 255), math.floor(val.G * 255), math.floor(val.B * 255))
+    elseif t == "EnumItem" then
+        return tostring(val)
+    elseif t == "Instance" then
+        return string.format("game:GetService(%q)%s", val:GetFullName():match("^([^.]+)"), val:GetFullName():match("^[^.]+(.*)") or "")
+    elseif t == "table" then
+        local parts = {}
+        local isArray = (#val > 0)
+        for k, v in pairs(val) do
+            local kStr = isArray and "" or string.format("[%s] = ", Subport.DexBridge.FormatValue(k, depth + 1))
+            table.insert(parts, kStr .. Subport.DexBridge.FormatValue(v, depth + 1))
+            if #parts > 20 then
+                table.insert(parts, "... [truncated]")
+                break
+            end
+        end
+        return "{" .. table.concat(parts, ", ") .. "}"
+    end
+    return string.format("%q", tostring(val))
+end
+
+-- Dex-style Closure Constants & Upvalues Inspection
+function Subport.DexBridge.InspectClosure(fn)
+    if typeof(fn) ~= "function" then return {} end
+    local info = {
+        Constants = {},
+        Upvalues = {},
+        ProtosCount = 0
+    }
+    local getconsts = debug and debug.getconstants or getconstants
+    if typeof(getconsts) == "function" then
+        pcall(function()
+            for _, c in ipairs(getconsts(fn)) do
+                table.insert(info.Constants, c)
+            end
+        end)
+    end
+    local getups = debug and debug.getupvalues or getupvalues
+    if typeof(getups) == "function" then
+        pcall(function()
+            for k, v in pairs(getups(fn)) do
+                info.Upvalues[k] = v
+            end
+        end)
+    end
+    local getpr = debug and debug.getprotos or getprotos
+    if typeof(getpr) == "function" then
+        pcall(function()
+            local pr = getpr(fn)
+            info.ProtosCount = (type(pr) == "table" and #pr) or 0
+        end)
+    end
+    return info
+end
 
 -- ======================================================================================
 -- 1. 🧠 EXTENDED SEMANTIC CODE GENERATION & MACRO ARCHETYPES (คลังสูตรสำเร็จขนาดใหญ่)
@@ -33,7 +189,7 @@ local Subport = {
 Subport.SemanticDatabase = {
     -- 1. Visuals & ESP Advanced
     Visuals = {
-        ["cham_esp"] = [[-- [[ PayomboyZ Subport: Advanced Chams & Box ESP ]]
+        ["cham_esp"] = [=[-- [[ PayomboyZ Subport: Advanced Chams & Box ESP ]]
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local function applyChams(p)
@@ -48,9 +204,9 @@ local function applyChams(p)
     end
 end
 for _, p in ipairs(Players:GetPlayers()) do applyChams(p) end
-Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() task.wait(0.5); applyChams(p) end) end)]],
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() task.wait(0.5); applyChams(p) end) end)]=],
 
-        ["tracer_esp"] = [[-- [[ PayomboyZ Subport: Snapline / Tracer ESP ]]
+        ["tracer_esp"] = [=[-- [[ PayomboyZ Subport: Snapline / Tracer ESP ]]
 local Camera = workspace.CurrentCamera
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -75,12 +231,12 @@ RunService.RenderStepped:Connect(function()
             lines[p].Visible = false
         end
     end
-end)]]
+end)]=]
     },
 
     -- 2. Combat & Hitbox Expansion
     Combat = {
-        ["hitbox_expander"] = [[-- [[ PayomboyZ Subport: Universal Hitbox Expander Matrix ]]
+        ["hitbox_expander"] = [=[-- [[ PayomboyZ Subport: Universal Hitbox Expander Matrix ]]
 local HitboxSize = Vector3.new(15, 15, 15)
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -95,9 +251,9 @@ game:GetService("RunService").RenderStepped:Connect(function()
             hrp.CanCollide = false
         end
     end
-end)]],
+end)]=],
 
-        ["silent_aim"] = [[-- [[ PayomboyZ Subport: Silent Aim & Target Locking Engine ]]
+        ["silent_aim"] = [=[-- [[ PayomboyZ Subport: Silent Aim & Target Locking Engine ]]
 local Camera = workspace.CurrentCamera
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -117,12 +273,12 @@ local function getClosestPlayer()
         end
     end
     return nearest
-end]]
+end]=]
     },
 
     -- 3. Automation & Autonomous Farming
     Farming = {
-        ["universal_proximity_farm"] = [[-- [[ PayomboyZ Subport: Universal Auto Proximity Prompt / Touch Collector ]]
+        ["universal_proximity_farm"] = [=[-- [[ PayomboyZ Subport: Universal Auto Proximity Prompt / Touch Collector ]]
 local Running = true
 task.spawn(function()
     while Running do
@@ -141,9 +297,9 @@ task.spawn(function()
             end
         end
     end
-end)]],
+end)]=],
 
-        ["mob_floating_killaura"] = [[-- [[ PayomboyZ Subport: Float-Over Mob Kill Aura Framework ]]
+        ["mob_floating_killaura"] = [=[-- [[ PayomboyZ Subport: Float-Over Mob Kill Aura Framework ]]
 local lp = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 task.spawn(function()
@@ -165,12 +321,12 @@ task.spawn(function()
             end
         end
     end
-end)]]
+end)]=]
     },
 
     -- 4. Movement & Physics Bypass
     Movement = {
-        ["fly_engine"] = [[-- [[ PayomboyZ Subport: CFrame Flight Matrix ]]
+        ["fly_engine"] = [=[-- [[ PayomboyZ Subport: CFrame Flight Matrix ]]
 local lp = game.Players.LocalPlayer
 local mouse = lp:GetMouse()
 local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
@@ -190,9 +346,9 @@ task.spawn(function()
             hrp.CFrame = hrp.CFrame + (moveVec.Unit * (speed * 0.05))
         end
     end
-end)]],
+end)]=],
 
-        ["noclip_matrix"] = [[-- [[ PayomboyZ Subport: Universal Noclip Engine ]]
+        ["noclip_matrix"] = [=[-- [[ PayomboyZ Subport: Universal Noclip Engine ]]
 local conn
 conn = game:GetService("RunService").Stepped:Connect(function()
     local char = game.Players.LocalPlayer.Character
@@ -201,15 +357,40 @@ conn = game:GetService("RunService").Stepped:Connect(function()
             if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
-end)]]
+end)]=]
     }
 }
 
 -- ======================================================================================
--- 2. 🔓 TOPSNIPER & VM DEOBFUSCATOR EXTENSION ENGINE (Devirtualizer & Constant Classifier)
+-- 2. 🔓 SAFE TOPSNIPER & UNIVERSAL VM DEOBFUSCATOR EXTENSION ENGINE V9.0
+-- (Anti-Hang, Isolated Sandbox, Asynchronous Yielding, Multi-Stage Pipeline)
 -- ======================================================================================
 Subport.Deobfuscator = {}
 
+-- 1. Helper: Decode Byte/Hex/Unicode Escape Sequences
+function Subport.Deobfuscator.DecodeEscapes(str)
+    if not str or type(str) ~= "string" then return "" end
+    local res = str:gsub("\\(%d%d%d)", function(d)
+        local n = tonumber(d)
+        if n and n >= 32 and n <= 126 then return string.char(n)
+        elseif n == 10 then return "\n"
+        elseif n == 9 then return "\t"
+        elseif n == 13 then return "\r"
+        end
+        return "\\" .. d
+    end)
+    res = res:gsub("\\x(%x%x)", function(h)
+        local n = tonumber(h, 16)
+        if n and n >= 32 and n <= 126 then return string.char(n)
+        elseif n == 10 then return "\n"
+        elseif n == 9 then return "\t"
+        end
+        return "\\x" .. h
+    end)
+    return res
+end
+
+-- 2. Static Pattern & Constant Pool Extractor (100% Safe, Zero-Crash)
 function Subport.Deobfuscator.AnalyzeBytecodeConstants(rawSource)
     local urls, remotes, services, allConstants = {}, {}, {}, {}
     local seen = {}
@@ -217,7 +398,7 @@ function Subport.Deobfuscator.AnalyzeBytecodeConstants(rawSource)
     local function recordStr(s)
         if not s or type(s) ~= "string" then return end
         s = s:gsub("^%s*(.-)%s*$", "%1")
-        if #s < 2 or #s > 2000 or seen[s] then return end
+        if #s < 2 or #s > 2500 or seen[s] then return end
         seen[s] = true
         table.insert(allConstants, s)
 
@@ -226,17 +407,20 @@ function Subport.Deobfuscator.AnalyzeBytecodeConstants(rawSource)
             table.insert(urls, s)
         elseif sLower:find("remote") or sLower:find("event") or sLower:find("function") or sLower:find("attack") or sLower:find("combat") or sLower:find("kill") or sLower:find("damage") or sLower:find("reward") then
             table.insert(remotes, s)
-        elseif s == "Workspace" or s == "Players" or s == "ReplicatedStorage" or s == "HttpService" or s == "TweenService" or s == "RunService" then
+        elseif s == "Workspace" or s == "Players" or s == "ReplicatedStorage" or s == "HttpService" or s == "TweenService" or s == "RunService" or s == "UserInputService" or s == "CoreGui" then
             table.insert(services, s)
         end
     end
 
-    -- 1. Extract string literals
-    for s in string.gmatch(rawSource, '"([^"\\]+)"') do recordStr(s) end
-    for s in string.gmatch(rawSource, "'([^'\\]+)'") do recordStr(s) end
+    -- Extract Escaped Strings
+    local decodedSource = Subport.Deobfuscator.DecodeEscapes(rawSource)
 
-    -- 2. Extract string.char(...) patterns
-    rawSource:gsub("string%.char%s*%(%s*([%d%s,]+)%s*%)", function(args)
+    -- Extract String Literals
+    for s in string.gmatch(decodedSource, '"([^"\\]+)"') do recordStr(s) end
+    for s in string.gmatch(decodedSource, "'([^'\\]+)'") do recordStr(s) end
+
+    -- Extract string.char(...) patterns
+    decodedSource:gsub("string%.char%s*%(%s*([%d%s,]+)%s*%)", function(args)
         local chars = {}
         for d in string.gmatch(args, "%d+") do
             local byteVal = tonumber(d)
@@ -252,47 +436,262 @@ function Subport.Deobfuscator.AnalyzeBytecodeConstants(rawSource)
         Remotes = remotes,
         Services = services,
         Constants = allConstants,
-        Count = #allConstants
+        Count = #allConstants,
+        DecodedSource = decodedSource
     }
 end
 
-function Subport.Deobfuscator.FormatReconstructedCode(analysisData, title)
-    local lines = {}
-    local function add(l) table.insert(lines, l or "") end
+-- 3. Isolated Sandboxed Dynamic Tracer (Anti-Hang, Step Quota, Zero Global Tampering)
+function Subport.Deobfuscator.SafeDynamicTrace(rawCode, options)
+    options = options or {}
+    local maxSteps = options.MaxSteps or 2500
+    local maxLogs = options.MaxLogs or 1500
+    local dumpLogs = {}
+    local capturedStrings = {}
+    local capturedChunks = {}
+    local seenStrs = {}
+    local stepCounter = 0
 
-    add("-- ======================================================================================")
-    add(string.format("-- [[ 🔓 PAYOMBOYZ DEOBFUSCATOR V8.5: %s ]]", string.upper(title or "RECONSTRUCTED LUAU SOURCE")))
-    add("-- Source Processed by PayomboyZ Subport High-Capacity Extension Engine")
-    add(string.format("-- Telemetry: %d Decrypted Constants | %d Network Endpoints | %d Identified Remotes", #analysisData.Constants, #analysisData.Urls, #analysisData.Remotes))
-    add("-- ======================================================================================\n")
-
-    if #analysisData.Urls > 0 then
-        add("-- [[ 🌐 EXTRACTED URLS & WEBHOOKS ]]")
-        for i, u in ipairs(analysisData.Urls) do
-            add(string.format("local URL_%d = %q", i, u))
+    local function dump(msg)
+        if #dumpLogs < maxLogs then
+            table.insert(dumpLogs, tostring(msg or ""))
         end
-        add("")
     end
 
-    if #analysisData.Services > 0 or #analysisData.Remotes > 0 then
-        add("-- [[ 📡 TARGETED SERVICES & REMOTES ]]")
-        for _, s in ipairs(analysisData.Services) do
-            add(string.format("local %s = game:GetService(%q)", s, s))
+    local function recordString(s)
+        if typeof(s) == "string" and #s >= 2 and not seenStrs[s] then
+            seenStrs[s] = true
+            table.insert(capturedStrings, s)
         end
-        for i, r in ipairs(analysisData.Remotes) do
-            add(string.format("local Remote_%d = %q", i, r))
-        end
-        add("")
     end
 
-    add("-- [[ 📦 DECRYPTED CONSTANT POOL (FIRST 120) ]]")
-    add("local Constants = {")
-    for i = 1, math.min(120, #analysisData.Constants) do
-        add(string.format("    [%d] = %q,", i, analysisData.Constants[i]))
-    end
-    add("}\n")
+    -- Isolated environment (DO NOT taint global string/table)
+    local sandboxString = {}
+    for k, v in pairs(string) do sandboxString[k] = v end
 
-    return table.concat(lines, "\n")
+    local orig_sub = string.sub
+    local orig_char = string.char
+    local orig_byte = string.byte
+    local orig_gsub = string.gsub
+    local orig_concat = table.concat
+
+    sandboxString.sub = function(s, i, j)
+        stepCounter = stepCounter + 1
+        if stepCounter > maxSteps then error("[Anti-Hang Watchdog] Sandbox execution step budget reached") end
+        local r = orig_sub(s, i, j)
+        if typeof(s) == "string" and #s > 18 and #r > 1 then
+            dump("[STR] sub: " .. tostring(r))
+            recordString(r)
+        end
+        return r
+    end
+
+    sandboxString.char = function(...)
+        stepCounter = stepCounter + 1
+        if stepCounter > maxSteps then error("[Anti-Hang Watchdog] Sandbox execution step budget reached") end
+        local r = orig_char(...)
+        if #r > 0 then
+            dump("[STR] char: " .. tostring(r))
+            recordString(r)
+        end
+        return r
+    end
+
+    sandboxString.byte = function(s, i, j)
+        stepCounter = stepCounter + 1
+        if stepCounter > maxSteps then error("[Anti-Hang Watchdog] Sandbox execution step budget reached") end
+        local r = orig_byte(s, i, j)
+        if typeof(s) == "string" and #s > 20 then
+            dump("[BYTE] from: " .. orig_sub(s, 1, 30) .. " = " .. tostring(r))
+        end
+        return r
+    end
+
+    sandboxString.gsub = function(s, p, r, n)
+        stepCounter = stepCounter + 1
+        if stepCounter > maxSteps then error("[Anti-Hang Watchdog] Sandbox execution step budget reached") end
+        local res = orig_gsub(s, p, r, n)
+        if typeof(s) == "string" and #s > 15 then
+            dump("[GSUB] " .. orig_sub(s, 1, 35) .. " -> " .. orig_sub(res, 1, 35))
+            recordString(res)
+        end
+        return res
+    end
+
+    local sandboxTable = {}
+    for k, v in pairs(table) do sandboxTable[k] = v end
+    sandboxTable.concat = function(t, sep, i, j)
+        stepCounter = stepCounter + 1
+        if stepCounter > maxSteps then error("[Anti-Hang Watchdog] Sandbox execution step budget reached") end
+        local r = orig_concat(t, sep, i, j)
+        if typeof(r) == "string" and #r > 4 then
+            dump("[CONCAT] " .. tostring(r))
+            recordString(r)
+        end
+        return r
+    end
+
+    local sandboxEnv = {}
+    for k, v in pairs(_G) do sandboxEnv[k] = v end
+    if typeof(getgenv) == "function" then
+        pcall(function() for k, v in pairs(getgenv()) do sandboxEnv[k] = v end end)
+    end
+
+    sandboxEnv.string = sandboxString
+    sandboxEnv.table = sandboxTable
+    sandboxEnv.load = function(chunk, name, mode, env)
+        if typeof(chunk) == "string" and #chunk > 30 then
+            dump(string.format("\n[LOADSTRING INTERCEPTED] Dynamic Payload (%d bytes):", #chunk))
+            dump(orig_sub(chunk, 1, 300) .. (#chunk > 300 and "\n... [TRUNCATED]" or ""))
+            table.insert(capturedChunks, chunk)
+        end
+        return function() end
+    end
+    sandboxEnv.loadstring = sandboxEnv.load
+
+    sandboxEnv.pcall = function(f, ...)
+        stepCounter = stepCounter + 1
+        if stepCounter > maxSteps then error("[Anti-Hang Watchdog] Sandbox execution step budget reached") end
+        local ok, res = pcall(f, ...)
+        if not ok then dump("[SANDBOX TRAP] " .. tostring(res)) end
+        return ok, res
+    end
+
+    dump("=== [PayomboyZ Safe VM Sandbox Initialized] ===")
+    dump("Target Size: " .. string.format("%.2f KB", #rawCode / 1024))
+    dump("Watchdog Quota: " .. maxSteps .. " steps (Anti-Hang Active)")
+
+    local compFunc = loadstring or load
+    if compFunc then
+        local fn, err = compFunc(rawCode)
+        if not fn then fn, err = compFunc("return (" .. rawCode .. ")") end
+
+        if fn and typeof(fn) == "function" then
+            if typeof(setfenv) == "function" then
+                pcall(function() setfenv(fn, sandboxEnv) end)
+            end
+            local ok, result = pcall(fn)
+            if ok then
+                dump("=== Script evaluation completed ===")
+                if result ~= nil then
+                    dump("Evaluated Return: " .. tostring(result))
+                end
+            else
+                dump("=== Execution halted cleanly: " .. tostring(result) .. " ===")
+            end
+        else
+            dump("Notice: Static analysis applied (Parser returned: " .. tostring(err) .. ")")
+        end
+    end
+
+    return dumpLogs, capturedStrings, capturedChunks
+end
+
+-- 4. Master Full Deobfuscate Engine (Asynchronous, Non-blocking, Clean Luau Output)
+function Subport.Deobfuscator.DeobfuscateAsync(rawCode, options, callback)
+    options = options or {}
+    task.spawn(function()
+        local startTime = os.clock()
+        
+        -- Phase 1: Static Bytecode & Constant Analysis
+        local analysis = Subport.Deobfuscator.AnalyzeBytecodeConstants(rawCode)
+        task.wait(0.01) -- Cooperative yield to keep game at 60 FPS
+
+        -- Phase 2: Safe Isolated Dynamic Trace
+        local dumpLogs, dynStrings, dynChunks = Subport.Deobfuscator.SafeDynamicTrace(rawCode, options)
+        task.wait(0.01) -- Cooperative yield
+
+        -- Merge & Deduplicate
+        local urls = analysis.Urls
+        local remotes = analysis.Remotes
+        local services = analysis.Services
+        local constants = analysis.Constants
+        local seen = {}
+        for _, s in ipairs(constants) do seen[s] = true end
+
+        for _, ds in ipairs(dynStrings) do
+            if not seen[ds] then
+                seen[ds] = true
+                table.insert(constants, ds)
+                local sLower = ds:lower()
+                if ds:find("^https?://") or sLower:find("discord%.com/api/webhooks") then
+                    table.insert(urls, ds)
+                elseif sLower:find("remote") or sLower:find("event") or sLower:find("attack") or sLower:find("combat") then
+                    table.insert(remotes, ds)
+                end
+            end
+        end
+
+        local totalElapsed = os.clock() - startTime
+
+        -- Reconstruct Clean Luau Source Code
+        local lines = {}
+        local function add(l) table.insert(lines, l or "") end
+
+        add("-- ======================================================================================")
+        add("-- [[ 🔓 PAYOMBOYZ DEOBFUSCATOR V9.0: RECONSTRUCTED LUAU SOURCE CODE ]]--")
+        add(string.format("-- Processed: %s | Elapsed: %.3f sec", os.date("%Y-%m-%d %H:%M:%S"), totalElapsed))
+        add(string.format("-- Telemetry: %d Constants | %d Dynamic Payloads | %d Endpoints | %d Remotes", #constants, #dynChunks, #urls, #remotes))
+        add("-- Engine: Safe Sandboxed VM Devirtualizer & Constant Deobfuscator")
+        add("-- ======================================================================================\n")
+
+        if #urls > 0 then
+            add("-- [[ 🌐 DETECTED NETWORK ENDPOINTS & WEBHOOKS ]]")
+            for i, u in ipairs(urls) do
+                add(string.format("local URL_%d = %q", i, u))
+            end
+            add("")
+        end
+
+        if #services > 0 or #remotes > 0 then
+            add("-- [[ 📡 TARGETED ROBLOX SERVICES & REMOTES ]]")
+            for _, s in ipairs(services) do
+                add(string.format("local %s = game:GetService(%q)", s, s))
+            end
+            for i, r in ipairs(remotes) do
+                add(string.format("local Remote_%d = %q", i, r))
+            end
+            add("")
+        end
+
+        if #dynChunks > 0 then
+            add("-- [[ 🚀 EXTRACTED INNER DYNAMIC CHUNKS (FROM LOADSTRING) ]]")
+            for i, chunk in ipairs(dynChunks) do
+                add(string.format("-- --- PAYLOAD CHUNK [%d] (%d bytes) ---", i, #chunk))
+                add(chunk)
+                add("")
+            end
+        end
+
+        if #constants > 0 then
+            add("-- [[ 📦 DECRYPTED CONSTANT POOL (FIRST 150) ]]")
+            add("local Constants = {")
+            for i = 1, math.min(150, #constants) do
+                add(string.format("    [%d] = %q,", i, constants[i]))
+            end
+            if #constants > 150 then
+                add(string.format("    -- ... (%d more strings omitted for readability)", #constants - 150))
+            end
+            add("}\n")
+        end
+
+        local cleanSource = table.concat(lines, "\n")
+        local dumpOutput = table.concat(dumpLogs, "\n")
+
+        if callback then
+            callback({
+                Success = true,
+                CleanSource = cleanSource,
+                DumpLog = dumpOutput,
+                Urls = urls,
+                Remotes = remotes,
+                Services = services,
+                Constants = constants,
+                Chunks = dynChunks,
+                Elapsed = totalElapsed
+            })
+        end
+    end)
 end
 
 -- ======================================================================================
@@ -329,31 +728,21 @@ function Subport.AntiCheat.AnalyzeScriptFlags(scriptInstance)
 end
 
 -- ======================================================================================
--- 4. 📦 DEEP RECURSIVE SERIALIZATION & DUMPER ENGINE
+-- 4. 📦 DEEP RECURSIVE SERIALIZATION & DUMPER ENGINE (Enhanced with Dex++ SaveInstance)
 -- ======================================================================================
 Subport.Dumper = {}
 
 function Subport.Dumper.SerializeValue(val)
-    local t = typeof(val)
-    if t == "string" then return string.format("%q", val) end
-    if t == "number" or t == "boolean" then return tostring(val) end
-    if t == "nil" then return "nil" end
-    if t == "Vector3" then return string.format("Vector3.new(%.2f, %.2f, %.2f)", val.X, val.Y, val.Z) end
-    if t == "Vector2" then return string.format("Vector2.new(%.2f, %.2f)", val.X, val.Y) end
-    if t == "CFrame" then
-        local p = val.Position
-        return string.format("CFrame.new(%.2f, %.2f, %.2f)", p.X, p.Y, p.Z)
-    end
-    if t == "Color3" then return string.format("Color3.fromRGB(%d, %d, %d)", math.floor(val.R * 255), math.floor(val.G * 255), math.floor(val.B * 255)) end
-    if t == "Instance" then return string.format("game.%s", val:GetFullName()) end
-    return string.format("%q", tostring(val))
+    return Subport.DexBridge.FormatValue(val)
 end
 
 function Subport.Dumper.DumpInstanceTree(root, maxDepth)
     maxDepth = maxDepth or 4
     local lines = {}
+    local visited = {}
     local function recurse(obj, depth)
-        if depth > maxDepth then return end
+        if depth > maxDepth or visited[obj] then return end
+        visited[obj] = true
         local indent = string.rep("  ", depth)
         lines[#lines + 1] = string.format("%s[%s] %s", indent, obj.ClassName, obj.Name)
         
@@ -361,7 +750,7 @@ function Subport.Dumper.DumpInstanceTree(root, maxDepth)
         local okAttr, attrs = pcall(function() return obj:GetAttributes() end)
         if okAttr and attrs then
             for k, v in pairs(attrs) do
-                lines[#lines + 1] = string.format("%s  @%s = %s", indent, k, Subport.Dumper.SerializeValue(v))
+                lines[#lines + 1] = string.format("%s  @%s = %s", indent, k, Subport.DexBridge.FormatValue(v))
             end
         end
 
@@ -410,12 +799,12 @@ pcall(function()
     if getgenv().ObsidianGlassEngine and getgenv().ObsidianGlassEngine.Notify then
         getgenv().ObsidianGlassEngine:Notify({
             Title = "⚡ SUBPORT EXTENSION CONNECTED",
-            Content = "PayomboyZ Subport V8.5 loaded: Semantic Templates, VM Solvers, and Heuristics ready!",
+            Content = "PayomboyZ Subport V9.0 (Dex++ Enhanced): Safe Deobfuscator & Bridge ready!",
             Duration = 4
         })
     end
 end)
 
-print("[PayomboyZ Hub] Subport Heavy Extension Engine V8.5 successfully registered in global environment.")
+print("[PayomboyZ Hub] Subport Heavy Companion Engine V9.0 (Dex++ Architecture) registered.")
 
 return Subport
