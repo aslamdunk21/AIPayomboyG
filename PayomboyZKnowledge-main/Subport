@@ -857,7 +857,8 @@ function Subport.Bridge.DeobfuscateAsync(rawCode, options, callback)
     task.spawn(function()
         local startTime = os.clock()
         local payload = HttpService:JSONEncode({
-            code = rawCode,
+            code = rawCode or "",
+            filePath = options.FilePath or options.filePath,
             engine = targetEngine,
             timeout = options.Timeout or Subport.Bridge.Timeout
         })
@@ -932,6 +933,62 @@ function Subport.Bridge.DeobfuscateAsync(rawCode, options, callback)
             localRes.Engine = "Local Lua Sandbox (Fallback)"
             if callback then callback(localRes) end
         end)
+    end)
+end
+
+function Subport.Bridge.GenerateAIAsync(promptText, targetContext, callback)
+    local reqFn = getExecutorRequest()
+    if not reqFn then
+        if callback then callback({ Success = false, Error = "Executor does not support HTTP requests" }) end
+        return
+    end
+
+    task.spawn(function()
+        local startTime = os.clock()
+        local payload = HttpService:JSONEncode({
+            prompt = promptText or "",
+            context = targetContext or {},
+            raw_code_only = true
+        })
+
+        local reqOk, res = pcall(function()
+            return reqFn({
+                Url = Subport.Bridge.ServerUrl .. "/api/gemini",
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = payload
+            })
+        end)
+
+        local elapsed = os.clock() - startTime
+
+        if reqOk and res and (res.StatusCode == 200 or res.Status == 200) then
+            local parseOk, data = pcall(function()
+                return HttpService:JSONDecode(res.Body)
+            end)
+
+            if parseOk and data and data.success and data.code and #data.code > 0 then
+                Subport.Bridge.IsConnected = true
+                if callback then
+                    callback({
+                        Success = true,
+                        Code = data.code,
+                        Elapsed = data.elapsed or elapsed,
+                        Model = data.model or "gemini-3.6-flash",
+                        IsBridge = true
+                    })
+                end
+                return
+            end
+        end
+
+        if callback then
+            callback({
+                Success = false,
+                Elapsed = elapsed,
+                Error = "Failed to connect to Centralized Gemini AI Hub"
+            })
+        end
     end)
 end
 
