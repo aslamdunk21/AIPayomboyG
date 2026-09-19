@@ -790,6 +790,152 @@ print("Response:", res.Body)]], url, method, hJson, body)
 end
 
 -- ======================================================================================
+-- 5.5 ⚡ PYTHON MULTI-ENGINE HTTP BRIDGE (Prometheus, Moonveil, Luraph, IronBrew, 2K, Luast)
+-- ======================================================================================
+Subport.Bridge = {
+    ServerUrl = "http://127.0.0.1:49281",
+    IsConnected = false,
+    LastCheck = 0,
+    AvailableEngines = {},
+    Timeout = 45
+}
+
+local function getExecutorRequest()
+    return (typeof(request) == "function" and request)
+        or (typeof(http_request) == "function" and http_request)
+        or (syn and typeof(syn.request) == "function" and syn.request)
+        or (fluxus and typeof(fluxus.request) == "function" and fluxus.request)
+        or (identifyexecutor and typeof(request) == "function" and request)
+end
+
+function Subport.Bridge.CheckHealthAsync(callback)
+    local reqFn = getExecutorRequest()
+    if not reqFn then
+        Subport.Bridge.IsConnected = false
+        if callback then callback(false, "Executor does not support HTTP requests") end
+        return
+    end
+
+    task.spawn(function()
+        local ok, res = pcall(function()
+            return reqFn({
+                Url = Subport.Bridge.ServerUrl .. "/health",
+                Method = "GET",
+                Headers = { ["Content-Type"] = "application/json" }
+            })
+        end)
+
+        if ok and res and (res.StatusCode == 200 or res.Status == 200) then
+            local parseOk, data = pcall(function()
+                return HttpService:JSONDecode(res.Body)
+            end)
+            if parseOk and data and data.status == "online" then
+                Subport.Bridge.IsConnected = true
+                Subport.Bridge.AvailableEngines = data.engines or {}
+                Subport.Bridge.LastCheck = os.clock()
+                if callback then callback(true, data) end
+                return
+            end
+        end
+
+        Subport.Bridge.IsConnected = false
+        if callback then callback(false, "Bridge server is offline") end
+    end)
+end
+
+function Subport.Bridge.DeobfuscateAsync(rawCode, options, callback)
+    options = options or {}
+    local reqFn = getExecutorRequest()
+    local targetEngine = options.Engine or "auto"
+
+    -- If executor cannot send HTTP or user explicitly forced local, fallback to local sandbox
+    if not reqFn or options.ForceLocal then
+        Subport.Deobfuscator.DeobfuscateAsync(rawCode, options, callback)
+        return
+    end
+
+    task.spawn(function()
+        local startTime = os.clock()
+        local payload = HttpService:JSONEncode({
+            code = rawCode,
+            engine = targetEngine,
+            timeout = options.Timeout or Subport.Bridge.Timeout
+        })
+
+        local reqOk, res = pcall(function()
+            return reqFn({
+                Url = Subport.Bridge.ServerUrl .. "/api/deobfuscate",
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = payload
+            })
+        end)
+
+        local elapsed = os.clock() - startTime
+
+        if reqOk and res and (res.StatusCode == 200 or res.Status == 200) then
+            local parseOk, data = pcall(function()
+                return HttpService:JSONDecode(res.Body)
+            end)
+
+            if parseOk and data and data.success then
+                Subport.Bridge.IsConnected = true
+                local cleanCode = data.deobfuscated_code or ""
+                local urls = data.urls or {}
+                local loadstrings = data.loadstrings or {}
+                local constants = data.constants or {}
+                local engineName = data.engine or "Python Multi-Engine"
+                local traceOps = data.trace_count or 0
+
+                local dumpLog = string.format(
+                    "=== [PAYOMBØYZ PYTHON MULTI-ENGINE DEOBFUSCATOR] ===\n" ..
+                    "Engine Used: %s\n" ..
+                    "Time Taken: %.2fs\n" ..
+                    "Output Lines: %d\n" ..
+                    "Traced Ops: %d\n" ..
+                    "Detected Endpoints: %d\n" ..
+                    "Dynamic Code Loaders: %d\n" ..
+                    "Execution Report: %s\n" ..
+                    "Status: SUCCESS",
+                    engineName, data.elapsed or elapsed, data.lines or #cleanCode:split("\n"),
+                    traceOps, #urls, #loadstrings, data.report_path or "Online In-Memory"
+                )
+
+                if callback then
+                    callback({
+                        Success = true,
+                        CleanSource = cleanCode,
+                        DumpLog = dumpLog,
+                        Urls = urls,
+                        Loadstrings = loadstrings,
+                        Remotes = {},
+                        Services = {},
+                        Constants = constants,
+                        Chunks = loadstrings,
+                        Elapsed = data.elapsed or elapsed,
+                        Engine = engineName,
+                        IsBridge = true
+                    })
+                end
+                return
+            else
+                local errMsg = (data and data.error) or "Python engine failed to deobfuscate"
+                warn("[PayomboyZ Bridge] Server returned error: " .. tostring(errMsg) .. ". Falling back to local Lua sandbox...")
+            end
+        else
+            Subport.Bridge.IsConnected = false
+        end
+
+        -- Safe Fallback to local Lua Sandbox
+        Subport.Deobfuscator.DeobfuscateAsync(rawCode, options, function(localRes)
+            localRes.IsBridge = false
+            localRes.Engine = "Local Lua Sandbox (Fallback)"
+            if callback then callback(localRes) end
+        end)
+    end)
+end
+
+-- ======================================================================================
 -- 6. GLOBAL REGISTRATION & NOTIFICATION
 -- ======================================================================================
 getgenv().PayomboyZ_Subport = Subport
